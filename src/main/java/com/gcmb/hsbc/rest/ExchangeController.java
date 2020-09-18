@@ -145,11 +145,11 @@ public class ExchangeController {
 		logger.info("started for loadDataByGivenDateAndTodayDate");
 		Gson gson = new Gson(); 
 		String[] values = year.split("-");
-		if(!monthValidation(Integer.valueOf(values[1]))) {
-			return gson.toJson("Month should be given between 01 to 12 only ");
-		}
 		if(values.length !=3) {
 			return gson.toJson("Enter year in YYYY-MM-DD format"); 
+		}
+		if(!monthValidation(Integer.valueOf(values[1]))) {
+			return gson.toJson("Month should be given between 01 to 12 only ");
 		}
 		List<Stock> byByGivendateTilldate = loadService.loadDataByGivenDateAndTodayDate(String.valueOf(year));
 		if(CollectionUtils.isEmpty(byByGivendateTilldate)) {
