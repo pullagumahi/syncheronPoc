@@ -172,6 +172,14 @@ public class ExchangeController {
 		logger.info("started for loadDataByYearSpecificMonthAndDateAndExchge");
 		Gson gson = new Gson(); 
 		String[] values = year.split("-");
+	    List<String> list = new ArrayList<>();
+	    list.add("GBP");
+	    list.add("USD");
+	    list.add("HKD");
+	    
+	    if(!list.contains(exchange)) {
+	    	return gson.toJson("Exchange should be given GBP or USD or HKD ");
+	    }
 		if(!monthValidation(Integer.valueOf(values[1]))) {
 			return gson.toJson("Month should be given between 01 to 12 only ");
 		}
