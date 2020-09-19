@@ -173,14 +173,17 @@ public class ExchangeController {
 	    list.add("USD");
 	    list.add("HKD");
 	    
-	    if(!list.contains(exchange)) {
+        if(!list.contains(exchange)) {
 	    	return gson.toJson("Exchange should be given GBP or USD or HKD ");
 	    }
+		if(values.length !=3) {
+			return gson.toJson("Enter year in YYYY-MM-DD format"); 
+		}
 		if(!monthValidation(Integer.valueOf(values[1]))) {
 			return gson.toJson("Month should be given between 01 to 12 only ");
 		}
-		if(values.length !=3) {
-			return gson.toJson("Enter year in YYYY-MM-DD format"); 
+		if(Integer.valueOf(Integer.valueOf(values[2]))>31) {
+			return gson.toJson("Month should be given between 01 to 30 or 31 only ");
 		}
 		
 		Float json = loadService.loadDataByYearSpecificMonthAndDateAndExchge((String.valueOf(year)),exchange); 
