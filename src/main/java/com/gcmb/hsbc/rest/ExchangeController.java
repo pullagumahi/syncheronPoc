@@ -14,42 +14,47 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
-
-import com.gcmb.hsbc.model.Stock;
-import com.gcmb.hsbc.service.ExchangeService;
 import com.google.gson.Gson;
+import io.swagger.annotations.ApiOperation;
+
+import com.gcmb.hsbc.Month;
+import com.gcmb.hsbc.MonthVal;
+import com.gcmb.hsbc.model.Stock;
+import com.gcmb.hsbc.service.CacheService;
+import com.gcmb.hsbc.service.ExchangeService;
 
 @RestController
 @EnableAutoConfiguration
 public class ExchangeController {
 	private static final Logger logger = LoggerFactory.getLogger(ExchangeController.class);
 	
+	private ExchangeService loadService;
+	
+	private CacheService cacheService;
+	
 	@Autowired
-	ExchangeService loadService;
-	
-	
+	public ExchangeController(ExchangeService loadService, CacheService cacheService) {
+		super();
+		this.loadService = loadService;
+		this.cacheService = cacheService;
+	}
 
-	/*
-	 * Given I want to load data
-     * When I hit REST endpoint for loading data
-     * Then data is loaded into in-memory database
-     * And only last 12 months are included (you may restrict yourself to the rate as of the 1st day
-     * of the month in question)
-      * And only GBP/USD/HKD currencies are included
-	 */
-	@RequestMapping(value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(value = "Request by Specific Month and Year and Date ",  notes = "User Story 1 : Acceptance criteria 1 - only last 12 months are included and only GBP/USD/HKD currencies are included ")
+	@RequestMapping(method = RequestMethod.GET, value = "/", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String initialLoad() throws InterruptedException {
 		logger.info("initialLoad for current year started");
 		int year = Calendar.getInstance().get(Calendar.YEAR);
-		loadService.initialLoadData(String.valueOf(year));
+		cacheService.initialLoadData(String.valueOf(year));
 		Thread.sleep(10000L);
 		Gson gson = new Gson();
 		logger.info("initialLoad for current year completed");
-		return gson.toJson("Initial loaded to cache succesfully");
+		return gson.toJson("Please open http://localhost:portno/swagger-ui.html#");
 	}
 	
-	@RequestMapping(value = "/byMonthYear/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
+	@ApiOperation(value = "Request by Specific Month and Year",  notes = "By default current year only GBP/USD/HKD currencies are included")
+	@RequestMapping(method = RequestMethod.GET, value = "/byMonthYear/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String loadDataByYearSpecificMonth(@PathVariable(value = "year") String year){
 		logger.info("started for loadDataByYearSpecificMonth");
 		String json = "";
@@ -67,7 +72,6 @@ public class ExchangeController {
 			if(monVal.length() ==1) {
 				monVal= "0" + monVal;
 			}
-			
 			json = gson.toJson(loadService.loadDataByYearSpecificMonth(String.valueOf(yearVal),String.valueOf(monVal)));
 			logger.info("completed for loadDataByYearSpecificMonth{}", json);
 		} catch (Exception exp) {
@@ -77,12 +81,9 @@ public class ExchangeController {
 		return json;
 	}
 	
-	/*
-	 * Given I want to load data for whole year
-     * When I hit REST endpoint of our application
-     * Then database has 12 rows with data
-	 */
-	@RequestMapping(value = "/byCompleteYear/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
+
+	@ApiOperation(value = "Request by Specific Year  ",  notes = "User Story 1 : Acceptance criteria 3 - only last 12 months are included and only GBP/USD/HKD currencies are included ")
+	@RequestMapping(method = RequestMethod.GET, value = "/byCompleteYear/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String getRatesByDateloadDataByCompleteYear(@PathVariable(value = "year")String year) {
 		logger.info("s"
 				+ "tarted for getRatesByDateloadDataByCompleteYear");
@@ -92,8 +93,8 @@ public class ExchangeController {
 			String yearVal = values[0];
 			String json = gson.toJson(loadService.loadDataByCompleteYear(yearVal));
 			if(StringUtils.isEmpty(json)) {
-				loadService.clearCache();
-				loadService.initialLoadData(String.valueOf(year));
+				cacheService.clearCache();
+				cacheService.initialLoadData(String.valueOf(year));
 				json = gson.toJson(loadService.loadDataByCompleteYear(yearVal));
 			}
 			logger.info("completed for getRatesByDateloadDataByCompleteYear{}",json);
@@ -104,15 +105,9 @@ public class ExchangeController {
 		}
 	}
 	
-	/**
-	 * Given a specific date (e.g. 2019-05-01)
-	 * When I access the rates end-point to get the exchange rate for that date for Pounds Sterling
-	 * (GBP) against the Euro (EUR)
-	 * Then GBP to EUR rate must be the same rate from the API for that date (e.g. 0.86248)
-	 * @param year
-	 * @return
-	 */
-	@RequestMapping(value = "/bySpecificMonthAndDate/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
+
+	@ApiOperation(value = "Request by Specific Month and Year and Day",  notes = "User Story 1 : Acceptance criteria 2 : Specific date (e.g. 2019-05-01)")
+	@RequestMapping(method = RequestMethod.GET, value = "/bySpecificMonthAndDate/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String loadDataByYearSpecificMonthAndDate(@PathVariable(value = "year")String year) {
 		logger.info("started for loadDataByYearSpecificMonthAndDate");
 		Gson gson = new Gson(); 
@@ -129,18 +124,19 @@ public class ExchangeController {
 			monthVal= "0" + monthVal;
 		}
 		String dayVal = values[2];
+		if(Integer.valueOf(dayVal)>31) {
+			return gson.toJson("Month should be given between 01 to 30 or 31 only ");
+		}
 		
 		String json = gson.toJson(loadService.loadDataByYearSpecificMonthAndDate(yearVal,monthVal,dayVal)); 
 		logger.info("completed for loadDataByYearSpecificMonthAndDate{}",json);
 		return json;
 	}
 	
-	/*
-	 * Given Range of dates
-     * When I hit REST endpoint for reading database
-     * Then data between given date and Today is returned
-	 */
-	@RequestMapping(value = "/byByGivendateTilldate/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
+
+	
+	@ApiOperation(value = "Request by given date and today date",  notes = "User Story 2 : Acceptance criteria 1 : Specific date (e.g. 2019-05-01)data between given date and Today is returned")
+	@RequestMapping(method = RequestMethod.GET, value = "/byByGivendateTilldate/{year}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String loadDataByGivenDateAndTodayDate(@PathVariable(value = "year")String year){
 		logger.info("started for loadDataByGivenDateAndTodayDate");
 		Gson gson = new Gson(); 
@@ -151,10 +147,13 @@ public class ExchangeController {
 		if(!monthValidation(Integer.valueOf(values[1]))) {
 			return gson.toJson("Month should be given between 01 to 12 only ");
 		}
+		if(Integer.valueOf(Integer.valueOf(values[1]))>31) {
+			return gson.toJson("Month should be given between 01 to 30 or 31 only ");
+		}
 		List<Stock> byByGivendateTilldate = loadService.loadDataByGivenDateAndTodayDate(String.valueOf(year));
 		if(CollectionUtils.isEmpty(byByGivendateTilldate)) {
-			loadService.clearCache();
-			loadService.initialLoadData(String.valueOf(year));
+			cacheService.clearCache();
+			cacheService.initialLoadData(String.valueOf(year));
 			byByGivendateTilldate = loadService.loadDataByGivenDateAndTodayDate(String.valueOf(year));
 		}
 		String json = gson.toJson(byByGivendateTilldate); 
@@ -162,12 +161,9 @@ public class ExchangeController {
 		return json;
 	}
 	
-	/*
-	 * Given date 2019-02-01
-     * When I hit REST endpoint for given date
-     * Then GBP rate for 2019-05-01 equals 0.86248
-	 */
-	@RequestMapping(value = "/byBySpecificMonthAndDateAndExchge/{year}/{exchange}", produces = MediaType.APPLICATION_JSON_VALUE)
+
+	@ApiOperation(value = "Request by given date and today date",  notes = "User Story 2 : Acceptance criteria 2 : Specific date and Exchange")
+	@RequestMapping(method = RequestMethod.GET, value = "/byBySpecificMonthAndDateAndExchge/{year}/{exchange}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String loadDataByYearSpecificMonthAndDateAndExchge(@PathVariable(value = "year") String year,@PathVariable(value = "exchange")String exchange) {
 		logger.info("started for loadDataByYearSpecificMonthAndDateAndExchge");
 		Gson gson = new Gson(); 
@@ -201,4 +197,5 @@ public class ExchangeController {
 		}
 		return false;
 	}
+  
 }

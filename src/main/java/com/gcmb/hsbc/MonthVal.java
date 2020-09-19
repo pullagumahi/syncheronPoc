@@ -14,14 +14,13 @@ public enum MonthVal {
 	   NOV(11),
 	   DEC(12);
 	
-
-	private final int monthLastDay;
+	private final int monthCode;
 
 	MonthVal(int code) {
-		this.monthLastDay = code;
+		this.monthCode = code;
 	}
 
-	public int getMonthLastDay() {
-		return this.monthLastDay;
+	public int getMonthCode() {
+		return this.monthCode;
 	}
 }
